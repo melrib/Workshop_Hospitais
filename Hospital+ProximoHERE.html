@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Workshop API HERE</title>
+        <!-- SCRIPTS -->
+        <meta name="viewport" charset="UTF-8" content="initial-scale=1.0, width=device-width" />
+        <script type="text/javascript" src="https://js.api.here.com/v3/3.1/mapsjs-core.js"></script>
+        <script type="text/javascript" src="https://js.api.here.com/v3/3.1/mapsjs-service.js"></script>
+        <script type="text/javascript" src="https://js.api.here.com/v3/3.1/mapsjs-ui.js"></script>
+        <script type="text/javascript" src="https://js.api.here.com/v3/3.1/mapsjs-mapevents.js"></script>
+        <link rel="stylesheet" type="text/css" href="https://js.api.here.com/v3/3.1/mapsjs-ui.css"/>
+    </head>
+    <body>
+        <h1 style="text-align: center;">Hospital Mais Próximo HERE</h1>
+        <div id="mapContainer" style="width: 80vw; height: 50vh; background: #39B6B3; display: block; margin: 0 auto; border: solid 2px black; margin-top: 100px;" > </div>
+        <div style="width: 100vw; height: 40px; margin-top: 30px;">
+            <input type="button" onclick="showHospitals()" value = "Mostrar Hospitais" style="width: 200px; height: 30px; border: 2px solid black; display: block; margin: 0 auto; margin-top: 20px;">
+        </div>
+        <div id="panel" style="width: 30vw; background: #39B6B3; color: white; margin-top: 20px;display: block; margin: 0 auto;"></div>
+        
+    </body>
+    <script>
+        var platform = new H.service.Platform({
+            apikey: "8JGadQY8e6qVvIB8Hr_JHgkpa03BZy_k0zvFkTDqyxw"   
+        });
+
+        var defaultLayers = platform.createDefaultLayers();
+        
+        var myPosition = {lat: -23.63166, lng: -46.68062};
+
+        var map = new H.Map(
+            document.getElementById('mapContainer'),
+            defaultLayers.vector.normal.map,
+            {
+                zoom: 18,
+                center: myPosition
+            });
+
+        var ui = H.ui.UI.createDefault(map, defaultLayers, 'pt-BR');
+
+        var mapEvents = new H.mapevents.MapEvents(map);
+
+        var behavior = new H.mapevents.Behavior(mapEvents);
+
+        var router = platform.getRoutingService();
+
+        var service = platform.getSearchService();
+
+        var homeIcon = new H.map.Icon('img/casa.png'); 
+            
+            var posMarker = new H.map.Marker(myPosition,{icon:homeIcon});
+
+            map.addObject(posMarker);
+            
+        let param = {
+                    at : myPosition.lat+','+myPosition.lng,
+                    q: "hospital",
+                    categories: "800-8000-0159, 800-8000-0000", 
+                    limit:100
+                }; 
+
+                service.browse(param,displayHospitals,alert);
+
+            function displayHospitals(response){
+
+            var HospitIcon = new H.map.Icon('img/hosp.png');
+
+            var HospitGroup = new H.map.Group();
+
+            for(let i = 0; i<response.items.length; i++){
+                let hospitPosition = response.items[i].position; 
+              
+                let data = response.items[i].title;
+              
+                let hospMarker = new H.map.Marker(hospitPosition,{icon: HospitIcon} );
+
+                HospitGroup.addObject(hospMarker);
+            }
+
+            map.addObject(HospitGroup);
+        }
+            function showRoute(hospitPosition){
+
+            let routingParameters = {
+            mode: 'fastest;car;traffic:enabled',
+            waypoint0: hospitPosition.lat+','+hospitPosition.lng,
+            waypoint1: myPosition.lat+','+myPosition.lng,
+            representation: 'display',
+            routeattributes : 'summary,shape',
+            language: "pt-BR"
+
+            };
+
+        router.calculateRoute(routingParameters, onResult,
+            function(error) {
+                alert(error.message);
+        });    
+        }
+
+            var onResult = function(result) {
+            var route,
+                routeShape,
+                startPoint,
+                endPoint,
+                linestring;
+            if(result.response.route) {
+                let route = result.response.route[0];
+                routeShape = route.shape;
+                linestring = new H.geo.LineString();
+                routeShape.forEach(function(point) {
+                    var parts = point.split(',');
+                    linestring.pushLatLngAlt(parts[0], parts[1]);
+                });
+
+                var routeLine = new H.map.Polyline(linestring, {
+                    style: { strokeColor: 'RGB(116, 66, 200)', lineWidth: 7 }
+                });
+
+                map.addObject(routeLine);
+                map.getViewModel().setLookAtData({bounds: routeLine.getBoundingBox()});
+            }
+        };
+        
+    </script>
+</html>
+
